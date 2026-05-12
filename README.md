@@ -4,6 +4,8 @@
 **Task:** Emotion Classifier 
 **Modalities:** Audio (Mel-Spectrogram) + Text (Whisper ASR Transcription)
 
+(Used AI for beautification and making diagrams in README only and  not used in code or any other thing)
+
 ## 1. Project Overview
 
 This project tackles **Emotion Recognition** — the task of automatically detecting the emotional state of a speaker from their voice. Emotions are subtle, multidimensional signals. A single modality (audio waveform or transcribed words alone) is often insufficient to capture the full picture. This project therefore builds and compares **three model types**:
@@ -406,5 +408,3 @@ As the statements were only of two kinds, the transcribe didn't help much.
 Despite the weak text modality, the FusionNN still outperforms AudioCNN alone. This is because:
 1. **Error diversity:** The CNN and RNN make different mistakes. Their concatenated outputs give the fusion head more degrees of freedom to recover from either modality's errors.
 2. **Prosodic rhythm in text:** Even with constant words, Whisper sometimes transcribes hesitations, repeated phonemes, or disfluencies differently across emotions — subtle signals the RNN can learn from.
-
-(Used AI for beautification in README only not used in code or any other thing)
