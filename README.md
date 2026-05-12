@@ -56,11 +56,6 @@ n_mels     = 128    # Number of mel frequency bands
 **Post-processing:**
 Each spectrogram is converted to dB scale (`librosa.power_to_db`) and then **z-score normalized** (mean = zero, variance = 1) per sample. This prevents louder audio samples from dominating the learning signal.
 
-```python
-spectrogram -= spectrogram.mean()
-spectrogram /= spectrogram.std()
-```
-
 ### 2.3 Text Feature Extraction — Whisper ASR
 
 For the text modality, speech audio is passed through **OpenAI Whisper** (`base` model) to produce textual transcriptions. Whisper is a robust ASR model trained on 680,000 hours of multilingual audio and handles noisy speech well.
@@ -270,13 +265,13 @@ This will show whether simple model averaging, without learning fusion weights, 
        ├─────────────────────────────────────┐
        │                                     │
        ▼                                     ▼
- ┌───────────────┐                   ┌───────────────┐
- │  Mel-Spectrogram                  │  Whisper ASR  │
- │  Extraction   │                   │  (base model) │
- │  n_fft=1024   │                   └──────┬────────┘
- │  hop=256      │                          │
- │  128 mel bins │                    Transcribed Text
- └──────┬────────┘                          │
+ ┌─────────────── ┐                   ┌───────────────┐
+ │  Mel-Spectrogram                   │  Whisper ASR  │
+ │  Extraction    │                   │  (base model) │
+ │  n_fft=1024    │                   └──────┬────────┘
+ │  hop=256       │                          │
+ │  128 mel bins  │                    Transcribed Text
+ └──────┬──────── ┘                          │
         │ Z-score Normalize                 ▼
         │                          ┌─────────────────┐
         │                          │ DistilBERT       │
@@ -345,8 +340,6 @@ This will show whether simple model averaging, without learning fusion weights, 
   ─────────────────────────────────────────────────────────────
 ```
 
----
-
 ## 5. Training Details & Design Decisions
 
 ### 5.1 Loss Function: CrossEntropyLoss
@@ -385,40 +378,19 @@ The following table summarizes the performance of all model variants on the **he
 
 ### 7.1 Overall Metrics
 
-| Model | Modality | Test Accuracy | Macro F1-Score | Notes |
+| Model | Modality | Test Accuracy | Notes |
 |-------|----------|--------------|----------------|-------|
-| **AudioCNN** | Audio (Mel-Spec) | ~55–65% | ~0.52–0.62 | Strong on high-energy emotions (Angry, Happy) |
-| **EmotionRNN** | Text (Whisper) | ~25–40% | ~0.20–0.35 | Weak — RAVDESS text is nearly class-invariant |
-| **FusionNN** | Audio + Text | ~60–72% | ~0.58–0.70 | Best overall; both modalities complement each other |
-| **Ensemble (50/50)** | Audio + Text | ~58–68% | ~0.55–0.65 | No training; simple average of softmax outputs |
-| **Ensemble (70/30)** | Audio + Text | ~56–66% | ~0.53–0.63 | Audio-biased; slightly below 50/50 |
+| **AudioCNN** | Audio (Mel-Spec) | ~45–65% | Strong on high-energy emotions (Angry, Happy) |
+| **EmotionRNN** | Text (Whisper) | ~25–40% |  Weak — RAVDESS text is nearly class-invariant |
+| **FusionNN** | Audio + Text | ~50–72% | Best overall; both modalities complement each other |
+| **Ensemble (50/50)** | Audio + Text | ~58–68% | No training; simple average of softmax outputs |
+| **Ensemble (70/30)** | Audio + Text | ~56–66% | Audio-biased; slightly below 50/50 |
 
-> **Note:** Exact values depend on hardware, random seed, and training run. The above data is one of run I performed and may not be changed as the notebook changes.
+> **Note:** Exact values depend on hardware, random seed, and training run. The above data is one of run I performed and may not be changed as the notebook changes. And mostly the results vary alot.
 
-### 7.2 Per-Class F1-Score (Illustrative — AudioCNN)
-
-| Emotion | Precision | Recall | F1 |
-|---------|-----------|--------|-----|
-| Neutral | 0.55 | 0.48 | 0.51 |
-| Calm | 0.50 | 0.53 | 0.51 |
-| Happy | 0.65 | 0.72 | 0.68 |
-| Sad | 0.58 | 0.55 | 0.56 |
-| Angry | 0.72 | 0.78 | 0.75 |
-| Fearful | 0.60 | 0.58 | 0.59 |
-| Disgust | 0.62 | 0.60 | 0.61 |
-| Surprised | 0.63 | 0.65 | 0.64 |
-
-**Key Observations:**
-- **Angry** achieves the highest F1 — it has distinctive high-energy, high-pitch acoustic features that are clearly captured by the Mel-Spectrogram CNN.
-- **Neutral** and **Calm** are commonly confused with each other — both have low energy and similar spectral profiles, leading to lower F1 scores.
-- **Happy** is well-detected acoustically but sometimes confused with Surprised (similar high-pitch energy).
-
-### 7.3 Confusion Matrix Summary (AudioCNN)
-
-The most frequent confusions:
-- **Neutral ↔ Calm** (similar low arousal, low expressivity)
-- **Happy ↔ Surprised** (similar high arousal, rising intonation)
-- **Fearful ↔ Sad** (both low valence, moderate energy)
+### 7.3 Confusion Matrix Summary
+*FusionNN* - confused low energy emotions
+*AudioCNN and others* - confused suprised with other strong emotions
 
 The FusionNN reduces some of these confusions because textual content (even if largely invariant) can sometimes disambiguate — a transcribed "Kids are talking by the door" spoken nervously may have subtle Whisper-detectable disfluencies absent in the neutral version.
 
@@ -434,3 +406,5 @@ As the statements were only of two kinds, the transcribe didn't help much.
 Despite the weak text modality, the FusionNN still outperforms AudioCNN alone. This is because:
 1. **Error diversity:** The CNN and RNN make different mistakes. Their concatenated outputs give the fusion head more degrees of freedom to recover from either modality's errors.
 2. **Prosodic rhythm in text:** Even with constant words, Whisper sometimes transcribes hesitations, repeated phonemes, or disfluencies differently across emotions — subtle signals the RNN can learn from.
+
+(Used AI for beautification in README only not used in code or any other thing)
